@@ -10,6 +10,9 @@ import {IntentLink} from 'part:@sanity/base/router'
 import ScrollContainer from 'part:@sanity/components/utilities/scroll-container'
 import Styleable from '../utilities/Styleable'
 import defaultStyles from './styles/DefaultPane.css'
+import DropDownButton from 'part:@sanity/components/buttons/dropdown'
+import DefaultPreview from 'part:@sanity/components/previews/default'
+import {get} from 'lodash'
 
 function getActionKey(action, index) {
   return (typeof action.action === 'string' ? action.action + action.title : action.title) || index
@@ -236,11 +239,6 @@ class Pane extends React.Component {
     this.setState(prev => ({menuIsOpen: !prev.menuIsOpen}))
   }
 
-  // Triggered by clicking "outside" of the menu when open, or after triggering action
-  handleCloseTemplateSelection = () => {
-    this.setState({templateSelectionIsOpen: false})
-  }
-
   handleRootClick = event => {
     const {onExpand, isCollapsed, index} = this.props
     if (isCollapsed && onExpand) {
@@ -295,41 +293,55 @@ class Pane extends React.Component {
     )
   }
 
+  renderActionMenuItem = item => {
+    if (!item) {
+      return null
+    }
+    return (
+      <DefaultPreview
+        title={item.title}
+        subtitle={get(item, 'intent.params.template')}
+        media={item.icon}
+      />
+    )
+  }
+
   renderAction = (action, i) => {
     if (action.intent) {
       return this.renderIntentAction(action, i)
     }
 
-    const {templateSelectionIsOpen} = this.state
     const {styles, isCollapsed, initialValueTemplates} = this.props
+    const items = S.menuItemsFromInitialValueTemplateItems(initialValueTemplates)
     const Icon = action.icon
 
     return (
       <div className={styles.menuWrapper} key={getActionKey(action, i)}>
-        <button
-          className={styles.actionButton}
-          data-menu-button-id={this.templateMenuId}
-          type="button"
-          title={action.title}
-          // eslint-disable-next-line react/jsx-no-bind
-          onClick={this.handleMenuAction.bind(this, action)}
-        >
-          <div className={styles.actionButtonInner} tabIndex={-1}>
-            <Icon />
-          </div>
-        </button>
-        <div className={styles.menuContainer}>
-          {action.action === 'toggleTemplateSelectionMenu' && templateSelectionIsOpen && (
-            <Menu
-              id={this.templateMenuId}
-              items={S.menuItemsFromInitialValueTemplateItems(initialValueTemplates)}
-              origin={isCollapsed ? 'top-left' : 'top-right'}
-              onAction={this.handleMenuAction}
-              onClose={this.handleCloseTemplateSelection}
-              onClickOutside={this.handleCloseTemplateSelection}
-            />
-          )}
-        </div>
+        {action.action != 'toggleTemplateSelectionMenu' && (
+          <button
+            className={styles.actionButton}
+            data-menu-button-id={this.templateMenuId}
+            type="button"
+            title={action.title}
+            // eslint-disable-next-line react/jsx-no-bind
+            onClick={this.handleMenuAction.bind(this, action)}
+          >
+            <div className={styles.actionButtonInner} tabIndex={-1}>
+              <Icon />
+            </div>
+          </button>
+        )}
+        {action.action === 'toggleTemplateSelectionMenu' && (
+          <DropDownButton
+            bleed
+            items={items}
+            renderItem={this.renderActionMenuItem}
+            onAction={this.handleMenuAction}
+            icon={action.icon}
+            kind="simple"
+            showArrow={false}
+          />
+        )}
       </div>
     )
   }
